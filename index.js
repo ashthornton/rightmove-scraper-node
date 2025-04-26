@@ -1,7 +1,8 @@
-const dotenv = require('dotenv')
-const { App } = require('@slack/bolt')
-const axios = require('axios')
-const fs = require('fs')
+import dotenv from 'dotenv'
+import Slack from '@slack/bolt'
+import axios from 'axios'
+import fs from 'fs'
+import express from 'express'
 
 const searchUrl = 'https://www.rightmove.co.uk/property-to-rent/find.html?houseFlatShare=false&keywords=&sortType=6&dontShow=houseShare%2Cretirement%2Cstudent&viewType=LIST&channel=RENT&index=0&maxPrice=1250&radius=0.0&retirement=false&locationIdentifier=USERDEFINEDAREA%5E%7B%22id%22%3A%228353222%22%7D'
 const jsonFilePath = './properties.json'
@@ -9,10 +10,12 @@ const slackChannelId = 'U57AXTH36'
 
 dotenv.config()
 
-const slack = new App({
+const slack = new Slack.App({
 	token: process.env.SLACK_BOT_TOKEN,
 	signingSecret: process.env.SLACK_SIGNING_SECRET,
 })
+
+const app = express()
 
 const fetchProperties = async () => {
 	try {
@@ -46,7 +49,7 @@ const fetchProperties = async () => {
 							return `${property.displayAddress} (${property.price.displayPrices[0].displayPrice})\nAvailable: ${formattedDate}\nhttps://rightmove.co.uk${property.propertyUrl}`
 						})
 						.join('\n')}`
-					
+
 					await publishMessage(slack, slackChannelId, message)
 				} else {
 					console.log('No new properties found.')
@@ -81,11 +84,30 @@ async function publishMessage(app, id, text) {
 
 (async () => {
 	// Start slack app
-	await slack.start(process.env.PORT || 3000)
+	await slack.start(3000)
 
 	console.log('⚡️ App is running!')
 
 	// Run the function every 15 minutes
 	fetchProperties()
 	setInterval(fetchProperties, 15 * 60 * 1000)
+
+	app.get('/', (req, res) => {
+		if (fs.existsSync(jsonFilePath)) {
+			const storedData = JSON.parse(fs.readFileSync(jsonFilePath, 'utf-8'))
+			const propertyLinks = storedData.map((property) => {
+				const date = new Date(property.firstVisibleDate)
+				const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`
+				return `https://rightmove.co.uk${property.propertyUrl} - Uploaded on: ${formattedDate}`
+			})
+			res.send(propertyLinks.join('<br>'))
+		} else {
+			res.send('No properties found.')
+		}
+	})
+
+	const port = parseInt(process.env.PORT) || 8080
+	app.listen(port, () => {
+		console.log(`listening on port ${port}`)
+	})
 })()

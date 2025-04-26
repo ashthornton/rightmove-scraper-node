@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   },
   "author": "",
   "license": "ISC",
@@ -12,6 +16,7 @@
     "@slack/bolt": "^4.2.1",
     "axios": "^1.9.0",
     "dotenv": "^16.5.0",
+    "express": "^5.1.0",
     "nodemon": "^3.1.10",
     "x-ray": "^2.3.4"
   }
